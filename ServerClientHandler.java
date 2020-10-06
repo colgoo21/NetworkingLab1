@@ -91,12 +91,17 @@ public class ServerClientHandler implements Runnable {
             try {
                 broadcast("SUBMIT NAME");
                 BufferedReader in = client.getInput();
-                String str = in.readLine();
+                String str;
                 while(true){
                     in = client.getInput();
                     str = in.readLine();
                     if(str.startsWith("NAME") && str.substring(4, str.length()) != null && !(ChatServer.clientList.contains(str.substring(4, str.length())))){
                         String userName = str.substring(5, str.length()).trim();
+                        client.setUserName(userName);
+                        break;
+                    }
+                    else if (str.startsWith("*") && str.substring (2,str.length()-1) != null && !(ChatServer.clientList.contains(str.substring(4, str.length())))){
+                        String userName = str.substring(1, str.length()).trim();
                         client.setUserName(userName);
                         break;
                     }
