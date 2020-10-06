@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.ArrayList;
 
 public class ServerClientHandler implements Runnable {
         // Maintain data about the client serviced by this thread
@@ -14,11 +15,24 @@ public class ServerClientHandler implements Runnable {
          * Broadcasts a message to all clients connected to the server.
          */
         public void broadcast(String msg) {
+            String m = "";
             try {
+                if (msg.startsWith("SUBMITNAME")){
+                    m = "Enter your name: ";
+                }
+                else if (msg.startsWith("WELCOME")){
+                    m = String.format("%s has joined", msg.substring(8));
+                }
+                else if (msg.startsWith("EXIT")){
+                    m = String.format("%s has left", msg.substring(4));
+                }
+                else{
+                    m = msg;
+                }
                 System.out.println("Broadcasting -- " + msg);
                 synchronized (ChatServer.clientList) {
                     for (ClientConnectionData c : ChatServer.clientList){
-                        c.getOut().println(msg);
+                        c.getOut().println(m);
                         // c.getOut().flush();
                     }
                 }
@@ -29,7 +43,29 @@ public class ServerClientHandler implements Runnable {
 
         }
 
+        public void broadcastChat(String msg){
+            String m = "";
+            System.out.println(ChatServer.clientList.toString());
+            try {
+                ArrayList<ClientConnectionData> ccdArrayList = new ArrayList<>(); // meant to add every ccd that isn't the client's
+                System.out.println("Broadcasting -- " + msg);
+                for(int i=0; i<ChatServer.clientList.size(); i++){
+                    if(ChatServer.clientList.get(i).getUserName() != client.getUserName()){
+                        ccdArrayList.add(ChatServer.clientList.get(i));
+                    }
+                }
+                m = String.format("%s:%s", client.getUserName(), msg.substring(6+client.getUserName().length())); // chat (4) plus the client username plus the two spaces
+                for (ClientConnectionData c: ccdArrayList) {
+                    c.getOut().println(m);
+                }
+            } catch (Exception ex) {
+                System.out.println("broadcast caught exception: " + ex);
+                ex.printStackTrace();
+            }
+        }
+
         public void broadcastPrivate(String userName, String msg){
+            String m = "";
             System.out.println(userName);
             System.out.println(ChatServer.clientList.toString());
             try {
@@ -39,10 +75,11 @@ public class ServerClientHandler implements Runnable {
                 for(int i=0; i<ChatServer.clientList.size(); i++){
                     if(ChatServer.clientList.get(i).getUserName().equals(userName)){
                         c = ChatServer.clientList.get(i);
+                        m = String.format("%s (private): %s", userName, msg);
                         break;
                     }
                 }
-                c.getOut().println(msg);
+                c.getOut().println(m);
             } catch (Exception ex) {
                 System.out.println("broadcast caught exception: " + ex);
                 ex.printStackTrace();
@@ -79,24 +116,32 @@ public class ServerClientHandler implements Runnable {
                         String chat = incoming.substring(4).trim();
                         if (chat.length() > 0) {
                             String msg = String.format("CHAT %s %s", client.getUserName(), chat);
-                            broadcast(msg);
+                            broadcastChat(msg);
                         }
                     }
-                    else if(incoming.startsWith("PCHAT")){
+                    else if (incoming.startsWith("*")){
+                        String chat = incoming.substring(1).trim();
+                        if (chat.length() > 0) {
+                            String msg = String.format("CHAT %s %s", client.getUserName(), chat);
+                            broadcastChat(msg);
+                        }
+                    }
+                    else if(incoming.startsWith("PCHAT")) {
                         String receiver = "";
-                        for(int i=0; i< ChatServer.clientList.size(); i++){
-                            if(incoming.startsWith(ChatServer.clientList.get(i).getUserName(), 6)){
+                        for (int i = 0; i < ChatServer.clientList.size(); i++) {
+                            if (incoming.startsWith(ChatServer.clientList.get(i).getUserName(), 6)) {
                                 receiver = ChatServer.clientList.get(i).getUserName();
                                 break;
                             }
                         }
-                        String chat = incoming.substring(6+receiver.length()).trim();
-                        if(chat.length() > 0){
+                        String chat = incoming.substring(6 + receiver.length()).trim();
+                        if (chat.length() > 0) {
                             String msg = String.format("PCHAT %s %s", client.getUserName(), chat);
                             broadcastPrivate(receiver, msg);
                         }
                     }
-                    else if (incoming.startsWith("QUIT")){
+                    else if (incoming.startsWith("QUIT") || incoming.startsWith("/quit")){
+                        broadcast(String.format("EXIT %s", client.getUserName()));
                         break;
                     }
                 }
