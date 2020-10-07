@@ -17,10 +17,7 @@ public class ServerClientHandler implements Runnable {
     public void broadcast(String msg) {
         String m = "";
         try {
-            if (msg.startsWith("SUBMITNAME")){
-                m = "Enter your name: ";
-            }
-            else if (msg.startsWith("WELCOME")){
+            if (msg.startsWith("WELCOME")){
                 m = String.format("%s has joined", msg.substring(8));
             }
             else if (msg.startsWith("EXIT")){
