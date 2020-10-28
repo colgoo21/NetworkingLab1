@@ -25,7 +25,6 @@ public class ServerClientHandler implements Runnable {
                 }
                 else if (msg.startsWith("EXIT")){
                     m = String.format("%s has left", msg.substring(4));
-                    broadcastMembers();
                 }
                 else{
                     m = msg;
@@ -112,26 +111,18 @@ public class ServerClientHandler implements Runnable {
     }
     public void broadcastMembers(){
         ArrayList<String> members = new ArrayList<>();
-        //getting a list of all of the usernames
-        for(ClientConnectionData c: ChatServer.clientList){
+        // getting a list of all of the usernames
+        for (ClientConnectionData c: ChatServer.clientList) {
             members.add(c.getUserName());
         }
-        //putting all the names in a nice string
-        String memberString = "Members: ";
-        for(int i=0; i<members.size(); i++){
-            if(i==members.size()-1){
-                memberString += members.get(i);
-            }
-            else{
-                memberString += members.get(i) + ", ";
-
-            }
+        // putting all the names in a nice string
+        String memberString = "Members: \n";
+        for (String name : members) {
+            memberString += name + "\n";
         }
-        //putting it on the server
-        synchronized (ChatServer.clientList) {
-            for (ClientConnectionData c : ChatServer.clientList) {
-                c.getOut().println(memberString);
-            }
+        // putting it on the server
+        for (ClientConnectionData c: ChatServer.clientList) {
+            c.getOut().println(memberString);
         }
     }
 
@@ -139,7 +130,9 @@ public class ServerClientHandler implements Runnable {
         public void run() {
             try {
                 broadcastClient("SUBMITNAME");
-                BufferedReader in = client.getInput();
+                BufferedReader in = new BufferedReader(new InputStreamReader(client.getSocket().getInputStream(), "UTF-8"));
+                PrintWriter out = new PrintWriter(
+                    new OutputStreamWriter(client.getSocket().getOutputStream(), "UTF-8"), true);
                 String str;
                 while(true){
                     in = client.getInput();
@@ -295,13 +288,14 @@ public class ServerClientHandler implements Runnable {
                 }
             } finally {
                 //Remove client from clientList, notify all
+                broadcastMembers();
                 synchronized (ChatServer.clientList) {
-                    ChatServer.clientList.remove(client);
+                        ChatServer.clientList.remove(client);
                 }
                 //System.out.println(client.getName() + " has left.");
                 //broadcast(String.format("EXIT %s", client.getUserName()));
                 try {
-                    client.getSocket().close();
+                        client.getSocket().close();
                 } catch (IOException ex) {}
 
             }
